@@ -208,6 +208,12 @@ copy_gpu_pwrlevels_conf() {
 	${bin}/fdtput "$new_dtb" "$KGSL_NODE" "qcom,initial-pwrlevel" "$initial_pwrlevel" -tu
 }
 
+random_strings() {
+	local len=$1
+
+	cat /dev/urandom | tr -dc 'a-zA-Z' | head -c $len
+}
+
 # Check firmware
 if strings /dev/block/bootdevice/by-name/xbl_config${slot} | grep -q 'led_blink'; then
 	ui_print "$_LANG_HOS_FIRMWARE_DETECTED"
@@ -642,7 +648,7 @@ if true; then  # I don't want to adjust the indentation of the code block below,
 	fi
 
 	ui_print "- $_LANG_VENDOR_DLKM_UNPACKING"
-	extract_vendor_dlkm_dir=${home}/_extract_vendor_dlkm
+	extract_vendor_dlkm_dir=${home}/_extract_vendor_dlkm_$(random_strings 3)
 	mkdir -p $extract_vendor_dlkm_dir
 	vendor_dlkm_is_ext4=false
 	extract_erofs ${home}/vendor_dlkm.img $extract_vendor_dlkm_dir || vendor_dlkm_is_ext4=true
@@ -652,9 +658,9 @@ if true; then  # I don't want to adjust the indentation of the code block below,
 		ui_print "- $_LANG_VENDOR_DLKM_IS_EXT4"
 		mount ${home}/vendor_dlkm.img $extract_vendor_dlkm_dir -o ro -t ext4 || \
 			abort "! $_LANG_VENDOR_DLKM_UNSUPPORTED"
-		vendor_dlkm_full_space=$(df -B1 | grep -E "[[:space:]]$extract_vendor_dlkm_dir\$" | awk '{print $2}')
-		vendor_dlkm_used_space=$(df -B1 | grep -E "[[:space:]]$extract_vendor_dlkm_dir\$" | awk '{print $3}')
-		vendor_dlkm_free_space=$(df -B1 | grep -E "[[:space:]]$extract_vendor_dlkm_dir\$" | awk '{print $4}')
+		vendor_dlkm_full_space=$(df -B1 | grep -E -m1 "$(basename $extract_vendor_dlkm_dir)\$" | awk '{print $2}')
+		vendor_dlkm_used_space=$(df -B1 | grep -E -m1 "$(basename $extract_vendor_dlkm_dir)\$" | awk '{print $3}')
+		vendor_dlkm_free_space=$(df -B1 | grep -E -m1 "$(basename $extract_vendor_dlkm_dir)\$" | awk '{print $4}')
 		vendor_dlkm_stock_modules_size=$(get_size ${extract_vendor_dlkm_dir}/lib/modules)
 		ui_print "- ${_LANG_VENDOR_DLKM_SPACE}:"
 		ui_print "  - ${_LANG_VENDOR_DLKM_SPACE_TOTAL}: $(bytes_to_mb $vendor_dlkm_full_space)"
