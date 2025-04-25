@@ -38,9 +38,9 @@ split_boot # skip ramdisk unpack
 
 . ${home}/langs/en.lang
 if ${BOOTMODE}; then
-	if [ "$(getprop ro.product.locale.language)" == "zh" ] || [ "$(getprop persist.sys.locale)" == "zh-CN" ]; then
-		. ${home}/langs/cn.lang
-	fi
+	case "$(getprop persist.sys.locale)" in
+		zh*) . ${home}/langs/cn.lang;;
+	esac
 fi
 
 SHA1_STOCK="@SHA1_STOCK@"
