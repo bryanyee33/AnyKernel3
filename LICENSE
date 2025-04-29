@@ -276,6 +276,24 @@ fdtget, fdtput: GPL/BSD dual-licensed
     Self-compiled binaries from unmodified source:
     https://github.com/dgibson/dtc
 
+e2fsck, resize2fs: GPLv2
+    This package, the EXT2 filesystem utilities, are made available under
+    the GNU Public License version 2, with the exception of the lib/ext2fs
+    and lib/e2p libraries, which are made available under the GNU Library
+    General Public License Version 2, the lib/uuid library which is made
+    available under a BSD-style license and the lib/et and lib/ss
+    libraries which are made available under an MIT-style license.  Please
+    see lib/uuid/COPYING for more details for the license for the files
+    comprising the libuuid library, and the source file headers of the
+    libet and libss libraries for more information.
+
+    Self-compiled binaries from unmodified source:
+    https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git
+
+vendor_boot_fix: None
+    Source:
+    https://github.com/Pzqqt/AnyKernel3/tree/Marble-Melt/vendor_boot_fix-ndk
+
 ## Optional Binary Licenses:
 
 mkbootfs, mkbootimg: Apache License 2.0
