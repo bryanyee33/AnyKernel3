@@ -141,7 +141,7 @@ extract.erofs, mkfs.erofs:
     "as is", as part of their intended scenarios, with no intention to
     support 3rd-party integration use cases.
 
-    Source not required, however, respective source is provided:
+    Official compiled binaries from unmodified source:
     https://github.com/sekaiacg/erofs-utils
 
 7za: LGPLv2
@@ -154,8 +154,8 @@ extract.erofs, mkfs.erofs:
     You can use 7-Zip on any computer, including a computer in a commercial organization.
     You don't need to register or pay for 7-Zip.
 
-    Source not required, however, respective source is provided:
-    https://sourceforge.net/projects/sevenzip/files/7-Zip/23.01/7z2301-src.tar.xz/download
+    Self-compiled binary from unmodified source:
+    https://sourceforge.net/projects/sevenzip/files/7-Zip/24.09/7z2409-src.tar.xz/download
 
 vbmeta-disable-verification: MIT License
 
@@ -207,7 +207,7 @@ bspatch: BSD
     IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
 
-    Source not required, however, respective source is provided:
+    Self-compiled binary from unmodified source:
     http://www.daemonology.net/bsdiff/
 
 keycheck: Apache License 2.0 & BSD
@@ -273,7 +273,7 @@ fdtget, fdtput: GPL/BSD dual-licensed
     practice, equivalent to being BSD licensed, since the terms of the BSD
     license are strictly more permissive than the GPL.
 
-    Source not required, however, respective source is provided:
+    Self-compiled binaries from unmodified source:
     https://github.com/dgibson/dtc
 
 ## Optional Binary Licenses:
