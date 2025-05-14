@@ -431,27 +431,22 @@ if keycode_select \
 fi
 
 do_fix_battery_usage=false
-skip_option_fix_battery_usage=false
 if ${is_fixed_qbc_driver} || ${is_oss_kernel_rom}; then
 	do_fix_battery_usage=true
-	skip_option_fix_battery_usage=true
 elif ${is_miui_rom} || ${is_aospa_rom}; then
-	skip_option_fix_battery_usage=true
-fi
-if ! ${skip_option_fix_battery_usage}; then
-	if keycode_select \
-	    "$_LANG_SELECT_FIX_BATTERY_USAGE" \
-	    " " \
-	    "$_LANG_NOTES" \
-	    "$_LANG_SELECT_FIX_BATTERY_USAGE_PROMPT_1" \
-	    "$_LANG_SELECT_FIX_BATTERY_USAGE_PROMPT_2"; then
-		do_fix_battery_usage=true
-	fi
+	do_fix_battery_usage=false
+elif keycode_select \
+    "$_LANG_SELECT_FIX_BATTERY_USAGE" \
+    " " \
+    "$_LANG_NOTES" \
+    "$_LANG_SELECT_FIX_BATTERY_USAGE_PROMPT_1" \
+    "$_LANG_SELECT_FIX_BATTERY_USAGE_PROMPT_2"; then
+	do_fix_battery_usage=true
 fi
 if ${do_fix_battery_usage}; then
 	qti_battery_charger_mod_options="${qti_battery_charger_mod_options} fix_battery_usage=y"
 fi
-unset do_fix_battery_usage skip_option_fix_battery_usage is_fixed_qbc_driver
+unset do_fix_battery_usage is_fixed_qbc_driver
 
 if [ -n "${qti_battery_charger_mod_options}" ]; then
 	qti_battery_charger_mod_options=$(echo "$qti_battery_charger_mod_options" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
@@ -461,47 +456,37 @@ unset modname_qti_battery_charger qti_battery_charger_mod_options
 
 # Alternative wired headset buttons mode
 use_wired_btn_altmode=false
-skip_option_wired_btn_altmode=false
 if ${is_miui_rom}; then
-	skip_option_wired_btn_altmode=true
+	use_wired_btn_altmode=false
 elif ${is_oss_kernel_rom} || ${is_aospa_rom}; then
 	use_wired_btn_altmode=true
-	skip_option_wired_btn_altmode=true
-fi
-if ! ${skip_option_wired_btn_altmode}; then
-	if keycode_select \
-	    "$_LANG_SELECT_WIRED_BTN_ALTMODE" \
-	    " " \
-	    "$_LANG_NOTES" \
-	    "$_LANG_SELECT_WIRED_BTN_ALTMODE_PROMPT_1" \
-	    "$_LANG_SELECT_WIRED_BTN_ALTMODE_PROMPT_2" \
-	    "$_LANG_SELECT_WIRED_BTN_ALTMODE_PROMPT_3"; then
-		use_wired_btn_altmode=true
-	fi
+elif keycode_select \
+    "$_LANG_SELECT_WIRED_BTN_ALTMODE" \
+    " " \
+    "$_LANG_NOTES" \
+    "$_LANG_SELECT_WIRED_BTN_ALTMODE_PROMPT_1" \
+    "$_LANG_SELECT_WIRED_BTN_ALTMODE_PROMPT_2" \
+    "$_LANG_SELECT_WIRED_BTN_ALTMODE_PROMPT_3"; then
+	use_wired_btn_altmode=true
 fi
 if ${use_wired_btn_altmode}; then
 	echo "options machine_dlkm waipio_wired_btn_altmode=y" >> $vendor_dlkm_modules_options_file
 fi
-unset use_wired_btn_altmode skip_option_wired_btn_altmode
+unset use_wired_btn_altmode
 
 # OSS msm_drm.ko
 if ${is_hyperos_fw}; then
 	use_oss_msm_drm=false
-	skip_option_oss_msm_drm=false
 	if ${is_oss_kernel_rom} || ${is_aospa_rom} || [ -f /vendor/bin/sensor-notifier ]; then
 		use_oss_msm_drm=true
-		skip_option_oss_msm_drm=true
 	elif ! ${is_miui_rom}; then  # For roms ported from other OS
-		skip_option_oss_msm_drm=true
-	fi
-	if ! ${skip_option_oss_msm_drm}; then
-		if keycode_select \
-		    "$_LANG_SELECT_OSS_MSM_DRM" \
-		    " " \
-		    "$_LANG_NOTES" \
-		    "$_LANG_SELECT_OSS_MSM_DRM_PROMPT_1"; then
-			use_oss_msm_drm=true
-		fi
+		use_oss_msm_drm=false
+	elif keycode_select \
+	    "$_LANG_SELECT_OSS_MSM_DRM" \
+	    " " \
+	    "$_LANG_NOTES" \
+	    "$_LANG_SELECT_OSS_MSM_DRM_PROMPT_1"; then
+		use_oss_msm_drm=true
 	fi
 	if ${use_oss_msm_drm}; then
 		if [ -f /vendor/etc/displayconfig/display_id_4630946370515662721.xml ] || [ -f /vendor/etc/displayconfig/display_id_4630946480857061761.xml ]; then
@@ -511,38 +496,33 @@ if ${is_hyperos_fw}; then
 			cp -f ${home}/_alt/OSS-msm_drm.ko ${home}/_vendor_dlkm_modules/msm_drm.ko
 		fi
 	fi
-	unset use_oss_msm_drm skip_option_oss_msm_drm
+	unset use_oss_msm_drm
 fi
 
 # OSS ir-spi.ko
 if ${is_hyperos_fw}; then
 	use_oss_ir_driver=false
-	skip_option_oss_ir_driver=false
 	if ${is_miui_rom}; then
-		skip_option_oss_ir_driver=true
+		use_oss_ir_driver=false
 	elif [ -f /vendor/bin/hw/android.hardware.ir@* ]; then
 		ui_print " " "- $_LANG_IR_HAL_XIAOMI"
-		skip_option_oss_ir_driver=true
+		use_oss_ir_driver=false
 	elif [ -f /vendor/bin/hw/android.hardware.ir-service.xiaomi ]; then
 		ui_print " " "- $_LANG_IR_HAL_LOS_OSS"
 		use_oss_ir_driver=true
-		skip_option_oss_ir_driver=true
-	fi
-	if ! ${skip_option_oss_ir_driver}; then
-		if keycode_select \
-		    "$_LANG_SELECT_OSS_IR" \
-		    " " \
-		    "$_LANG_NOTES" \
-		    "$_LANG_SELECT_OSS_IR_PROMPT_1" \
-		    "$_LANG_SELECT_OSS_IR_PROMPT_2" \
-		    "$_LANG_SELECT_OSS_IR_PROMPT_3"; then
-			use_oss_ir_driver=true
-		fi
+	elif keycode_select \
+	    "$_LANG_SELECT_OSS_IR" \
+	    " " \
+	    "$_LANG_NOTES" \
+	    "$_LANG_SELECT_OSS_IR_PROMPT_1" \
+	    "$_LANG_SELECT_OSS_IR_PROMPT_2" \
+	    "$_LANG_SELECT_OSS_IR_PROMPT_3"; then
+		use_oss_ir_driver=true
 	fi
 	if ${use_oss_ir_driver}; then
 		cp -f ${home}/_alt/OSS-ir-spi.ko ${home}/_vendor_dlkm_modules/ir-spi.ko
 	fi
-	unset use_oss_ir_driver skip_option_oss_ir_driver
+	unset use_oss_ir_driver
 fi
 
 # OSS zram.ko & zsmalloc.ko
