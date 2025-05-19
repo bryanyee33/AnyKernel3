@@ -78,9 +78,6 @@ do_aw882xx_hack() {
 	fi
 
 	for node in $(fdtget "$dtbo_file" "$aw882xx_node" -l); do
-		# Disable cali mode
-		fdtput "$dtbo_file" "${aw882xx_node}/${node}" "aw-cali-mode" "none" -ts
-
 		# Enable fade in/out
 		fdtput "$dtbo_file" "${aw882xx_node}/${node}" "fade-flag" 1 -tu
 
