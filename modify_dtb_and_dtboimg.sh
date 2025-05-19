@@ -150,7 +150,7 @@ do_panel_hack ./dtbo-1 && do_xiaomi_touch_hack ./dtbo-1 && sync || exit 1
 for dtbo_file in ./dtbo-0 ./dtbo-1; do
 	echo "- Making ${dtbo_file}.img ..."
 	mkdtboimg.py create ${dtbo_file}.img $dtbo_file
-	avbtool add_hash_footer --partition_name dtbo --partition_size $((23 * 1024 * 1024)) --image ${dtbo_file}.img
+	avbtool add_hash_footer --partition_name dtbo --partition_size $((24 * 1024 * 1024)) --image ${dtbo_file}.img
 	rm $dtbo_file
 done
 
