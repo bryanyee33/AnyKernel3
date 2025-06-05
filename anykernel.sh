@@ -507,7 +507,7 @@ if ${is_hyperos_fw}; then
 	elif [ -f /vendor/bin/hw/android.hardware.ir@* ]; then
 		ui_print " " "- $_LANG_IR_HAL_XIAOMI"
 		use_oss_ir_driver=false
-	elif [ -f /vendor/bin/hw/android.hardware.ir-service.xiaomi ]; then
+	elif [ -f /vendor/bin/hw/android.hardware.ir-service.xiaomi ] || [ -f /vendor/bin/hw/android.hardware.ir-service.lineage ]; then
 		ui_print " " "- $_LANG_IR_HAL_LOS_OSS"
 		use_oss_ir_driver=true
 	elif keycode_select \
