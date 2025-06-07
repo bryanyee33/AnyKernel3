@@ -396,7 +396,7 @@ vendor_dlkm_modules_options_file=${home}/_vendor_dlkm_modules/modules.options
 [ -f $vendor_dlkm_modules_options_file ] || touch $vendor_dlkm_modules_options_file
 
 # xiaomi_touch.ko
-if [ -f /vendor/bin/hw/vendor.lineage.touch@* ]; then
+if [ -n "$(ls /vendor/bin/hw/vendor.lineage.touch@* 2>/dev/null)" ]; then
 	ui_print " "
 	ui_print "- $_LANG_DETECTED_OSS_XIAOMI_TOUCH_PROMPT_1"
 	ui_print "- $_LANG_DETECTED_OSS_XIAOMI_TOUCH_PROMPT_2"
@@ -498,7 +498,7 @@ unset use_oss_msm_drm
 use_oss_ir_driver=false
 if ${is_miui_rom}; then
 	use_oss_ir_driver=false
-elif [ -f /vendor/bin/hw/android.hardware.ir@* ]; then
+elif [ -n "$(ls /vendor/bin/hw/android.hardware.ir@* 2>/dev/null)" ]; then
 	ui_print " " "- $_LANG_IR_HAL_XIAOMI"
 	use_oss_ir_driver=false
 elif [ -f /vendor/bin/hw/android.hardware.ir-service.xiaomi ] || [ -f /vendor/bin/hw/android.hardware.ir-service.lineage ]; then
