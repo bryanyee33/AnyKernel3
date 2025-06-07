@@ -144,41 +144,36 @@ def main_multi(build_version):
     temp_ak_sh = os.path.join(tempfile.gettempdir(), "anykernel.sh")
     temp_image_7z = os.path.join(tempfile.gettempdir(), "Image.7z")
     temp_dtb_7z = os.path.join(tempfile.gettempdir(), "_dtb.7z")
-    temp_mods_miui_7z = os.path.join(tempfile.gettempdir(), "_modules_miui.7z")
     temp_mods_hos_7z = os.path.join(tempfile.gettempdir(), "_modules_hyperos.7z")
 
     assert os.path.exists(image_stock)
     assert os.path.exists(image_ksu)
 
-    rich.print("[yellow][1/9][/yellow] [green]Generating SHA1 for image files...[/green]")
+    rich.print("[yellow][1/8][/yellow] [green]Generating SHA1 for image files...[/green]")
     sha1_image_stock = get_sha1(image_stock)
     sha1_image_ksu = get_sha1(image_ksu)
     print("SHA1 for Image    :", sha1_image_stock)
     print("SHA1 for Image_ksu:", sha1_image_ksu)
 
-    rich.print("[yellow][2/9][/yellow] [green]Generating patch file...[/green]")
+    rich.print("[yellow][2/8][/yellow] [green]Generating patch file...[/green]")
     remove_path(local_path("bs_patches", "ksu.p"))
     bsdiff4_file_diff(image_stock, image_ksu, local_path("bs_patches", "ksu.p"))
 
-    rich.print("[yellow][3/9][/yellow] [green]Regenerating module dependency information...[/green]")
-    for d in ("_modules_miui", "_modules_hyperos"):
-        assert do_depmod_regen(local_path(d, "_vendor_boot_modules"), "/lib/modules/") == 0
-        assert do_depmod_regen(local_path(d, "_vendor_dlkm_modules"), "/vendor/lib/modules/") == 0
+    rich.print("[yellow][3/8][/yellow] [green]Regenerating module dependency information...[/green]")
+    assert do_depmod_regen(local_path("_modules_hyperos", "_vendor_boot_modules"), "/lib/modules/") == 0
+    assert do_depmod_regen(local_path("_modules_hyperos", "_vendor_dlkm_modules"), "/vendor/lib/modules/") == 0
 
     try:
-        rich.print("[yellow][4/9][/yellow] [green]Compressing Image.7z ...[/green]")
+        rich.print("[yellow][4/8][/yellow] [green]Compressing Image.7z ...[/green]")
         make_7z(local_path("Image"), temp_image_7z)
 
-        rich.print("[yellow][5/9][/yellow] [green]Compressing _modules_miui.7z ...[/green]")
-        make_7z(local_path("_modules_miui"), temp_mods_miui_7z, extra_args="-mf=off")
-
-        rich.print("[yellow][6/9][/yellow] [green]Compressing _modules_hyperos.7z ...[/green]")
+        rich.print("[yellow][5/8][/yellow] [green]Compressing _modules_hyperos.7z ...[/green]")
         make_7z(local_path("_modules_hyperos"), temp_mods_hos_7z, extra_args="-mf=off")
 
-        rich.print("[yellow][7/9][/yellow] [green]Compressing _dtb.7z ...[/green]")
+        rich.print("[yellow][6/8][/yellow] [green]Compressing _dtb.7z ...[/green]")
         make_7z(local_path("_dtb"), temp_dtb_7z)
 
-        rich.print("[yellow][8/9][/yellow] [green]Making zip package...[/green]")
+        rich.print("[yellow][7/8][/yellow] [green]Making zip package...[/green]")
         with change_dir(BASE_DIR):
             with open("anykernel.sh", "r", encoding='utf-8') as f1:
                 with open(temp_ak_sh, "w", encoding='utf-8', newline='\n') as f2:
@@ -187,18 +182,17 @@ def main_multi(build_version):
                     )
             zip_file = make_zip(
                 "META-INF", "tools", "bs_patches", "langs",
-                temp_mods_miui_7z, temp_mods_hos_7z, temp_dtb_7z, temp_image_7z, temp_ak_sh,
+                temp_mods_hos_7z, temp_dtb_7z, temp_image_7z, temp_ak_sh,
                 "_restore_anykernel.sh", "_rollback_anykernel.sh",
                 "LICENSE", "banner",
             )
     finally:
         remove_path(temp_ak_sh)
-        remove_path(temp_mods_miui_7z)
         remove_path(temp_mods_hos_7z)
         remove_path(temp_dtb_7z)
         remove_path(temp_image_7z)
 
-    rich.print("[yellow][9/9][/yellow] [green]Signing zip package...[/green]")
+    rich.print("[yellow][8/8][/yellow] [green]Signing zip package...[/green]")
     if SIGN_ZIP:
         try:
             sign_zip(zip_file)

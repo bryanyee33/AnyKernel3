@@ -252,6 +252,13 @@ else
 	is_hyperos_fw=false
 fi
 
+if ! ${is_hyperos_fw}; then
+	ui_print " " "$_LANG_MIUI14_FIRMWARE_NOT_SUPPORT"
+	sleep 3
+	abort "$_LANG_ABORTING"
+fi
+unset is_hyperos_fw
+
 # Staging unmodified partition images
 mkdir -p ${home}/_orig
 cp ${home}/boot.img ${home}/_orig/boot.img
@@ -375,15 +382,11 @@ $BOOTMODE || setenforce 0
 
 ui_print " "
 ui_print "- $_LANG_UNPACKING_KERNEL_MODULES"
-if ${is_hyperos_fw}; then
-	modules_pkg=${home}/_modules_hyperos.7z
-else
-	modules_pkg=${home}/_modules_miui.7z
-fi
+modules_pkg=${home}/_modules_hyperos.7z
 [ -f $modules_pkg ] || abort "! $_LANG_CANNOT_FOUND ${modules_pkg}!"
 ${bin}/7za x $modules_pkg -o${home}/ && [ -d ${home}/_vendor_boot_modules ] && [ -d ${home}/_vendor_dlkm_modules ] || \
 	abort "! $_LANG_FAILED_TO_UNPACK ${modules_pkg}!"
-if ${is_hyperos_fw} && ${is_hyperos_fw_with_new_adsp2}; then
+if ${is_hyperos_fw_with_new_adsp2}; then
 	cp -f ${home}/_alt/NEW-qti_battery_charger_main.ko       ${home}/_vendor_dlkm_modules/qti_battery_charger_main.ko
 	cp -f ${home}/_alt/NEW-qti_battery_charger_main-STOCK.ko ${home}/_vendor_boot_modules/qti_battery_charger_main.ko
 fi
@@ -393,7 +396,7 @@ vendor_dlkm_modules_options_file=${home}/_vendor_dlkm_modules/modules.options
 [ -f $vendor_dlkm_modules_options_file ] || touch $vendor_dlkm_modules_options_file
 
 # xiaomi_touch.ko
-if ${is_hyperos_fw} && [ -f /vendor/bin/hw/vendor.lineage.touch@* ]; then
+if [ -f /vendor/bin/hw/vendor.lineage.touch@* ]; then
 	ui_print " "
 	ui_print "- $_LANG_DETECTED_OSS_XIAOMI_TOUCH_PROMPT_1"
 	ui_print "- $_LANG_DETECTED_OSS_XIAOMI_TOUCH_PROMPT_2"
@@ -413,13 +416,7 @@ if keycode_select \
 	echo "options goodix_core force_high_report_rate=y" >> $vendor_dlkm_modules_options_file
 fi
 
-# qti_battery_charger.ko / qti_battery_charger_main.ko
-if ${is_hyperos_fw}; then
-	modname_qti_battery_charger=qti_battery_charger_main
-else
-	modname_qti_battery_charger=qti_battery_charger
-fi
-
+# qti_battery_charger_main.ko
 qti_battery_charger_mod_options=""
 if keycode_select \
     "$_LANG_SELECT_REAL_BATTERY" \
@@ -450,9 +447,9 @@ unset do_fix_battery_usage is_fixed_qbc_driver
 
 if [ -n "${qti_battery_charger_mod_options}" ]; then
 	qti_battery_charger_mod_options=$(echo "$qti_battery_charger_mod_options" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-	echo "options ${modname_qti_battery_charger} ${qti_battery_charger_mod_options}" >> $vendor_dlkm_modules_options_file
+	echo "options qti_battery_charger_main ${qti_battery_charger_mod_options}" >> $vendor_dlkm_modules_options_file
 fi
-unset modname_qti_battery_charger qti_battery_charger_mod_options
+unset qti_battery_charger_mod_options
 
 # Alternative wired headset buttons mode
 use_wired_btn_altmode=false
@@ -475,55 +472,51 @@ fi
 unset use_wired_btn_altmode
 
 # OSS msm_drm.ko
-if ${is_hyperos_fw}; then
+use_oss_msm_drm=false
+if ${is_oss_kernel_rom} || ${is_aospa_rom} || [ -f /vendor/bin/sensor-notifier ]; then
+	use_oss_msm_drm=true
+elif ! ${is_miui_rom}; then  # For roms ported from other OS
 	use_oss_msm_drm=false
-	if ${is_oss_kernel_rom} || ${is_aospa_rom} || [ -f /vendor/bin/sensor-notifier ]; then
-		use_oss_msm_drm=true
-	elif ! ${is_miui_rom}; then  # For roms ported from other OS
-		use_oss_msm_drm=false
-	elif keycode_select \
-	    "$_LANG_SELECT_OSS_MSM_DRM" \
-	    " " \
-	    "$_LANG_NOTES" \
-	    "$_LANG_SELECT_OSS_MSM_DRM_PROMPT_1"; then
-		use_oss_msm_drm=true
-	fi
-	if ${use_oss_msm_drm}; then
-		if [ -f /vendor/etc/displayconfig/display_id_4630946370515662721.xml ] || [ -f /vendor/etc/displayconfig/display_id_4630946480857061761.xml ]; then
-			# https://github.com/cupid-development/android_device_xiaomi_marble/commit/eee64379280d5bc680e91371679d788b63fe5039
-			cp -f ${home}/_alt/OSS-msm_drm-2.ko ${home}/_vendor_dlkm_modules/msm_drm.ko
-		else
-			cp -f ${home}/_alt/OSS-msm_drm.ko ${home}/_vendor_dlkm_modules/msm_drm.ko
-		fi
-	fi
-	unset use_oss_msm_drm
+elif keycode_select \
+    "$_LANG_SELECT_OSS_MSM_DRM" \
+    " " \
+    "$_LANG_NOTES" \
+    "$_LANG_SELECT_OSS_MSM_DRM_PROMPT_1"; then
+	use_oss_msm_drm=true
 fi
+if ${use_oss_msm_drm}; then
+	if [ -f /vendor/etc/displayconfig/display_id_4630946370515662721.xml ] || [ -f /vendor/etc/displayconfig/display_id_4630946480857061761.xml ]; then
+		# https://github.com/cupid-development/android_device_xiaomi_marble/commit/eee64379280d5bc680e91371679d788b63fe5039
+		cp -f ${home}/_alt/OSS-msm_drm-2.ko ${home}/_vendor_dlkm_modules/msm_drm.ko
+	else
+		cp -f ${home}/_alt/OSS-msm_drm.ko ${home}/_vendor_dlkm_modules/msm_drm.ko
+	fi
+fi
+unset use_oss_msm_drm
 
 # OSS ir-spi.ko
-if ${is_hyperos_fw}; then
+use_oss_ir_driver=false
+if ${is_miui_rom}; then
 	use_oss_ir_driver=false
-	if ${is_miui_rom}; then
-		use_oss_ir_driver=false
-	elif [ -f /vendor/bin/hw/android.hardware.ir@* ]; then
-		ui_print " " "- $_LANG_IR_HAL_XIAOMI"
-		use_oss_ir_driver=false
-	elif [ -f /vendor/bin/hw/android.hardware.ir-service.xiaomi ] || [ -f /vendor/bin/hw/android.hardware.ir-service.lineage ]; then
-		ui_print " " "- $_LANG_IR_HAL_LOS_OSS"
-		use_oss_ir_driver=true
-	elif keycode_select \
-	    "$_LANG_SELECT_OSS_IR" \
-	    " " \
-	    "$_LANG_NOTES" \
-	    "$_LANG_SELECT_OSS_IR_PROMPT_1" \
-	    "$_LANG_SELECT_OSS_IR_PROMPT_2" \
-	    "$_LANG_SELECT_OSS_IR_PROMPT_3"; then
-		use_oss_ir_driver=true
-	fi
-	if ${use_oss_ir_driver}; then
-		cp -f ${home}/_alt/OSS-ir-spi.ko ${home}/_vendor_dlkm_modules/ir-spi.ko
-	fi
-	unset use_oss_ir_driver
+elif [ -f /vendor/bin/hw/android.hardware.ir@* ]; then
+	ui_print " " "- $_LANG_IR_HAL_XIAOMI"
+	use_oss_ir_driver=false
+elif [ -f /vendor/bin/hw/android.hardware.ir-service.xiaomi ] || [ -f /vendor/bin/hw/android.hardware.ir-service.lineage ]; then
+	ui_print " " "- $_LANG_IR_HAL_LOS_OSS"
+	use_oss_ir_driver=true
+elif keycode_select \
+    "$_LANG_SELECT_OSS_IR" \
+    " " \
+    "$_LANG_NOTES" \
+    "$_LANG_SELECT_OSS_IR_PROMPT_1" \
+    "$_LANG_SELECT_OSS_IR_PROMPT_2" \
+    "$_LANG_SELECT_OSS_IR_PROMPT_3"; then
+	use_oss_ir_driver=true
 fi
+if ${use_oss_ir_driver}; then
+	cp -f ${home}/_alt/OSS-ir-spi.ko ${home}/_vendor_dlkm_modules/ir-spi.ko
+fi
+unset use_oss_ir_driver
 
 # OSS zram.ko & zsmalloc.ko
 if ${is_miui_rom}; then
@@ -812,7 +805,7 @@ write_boot  # Since dtbo.img exists in ${home}, the dtbo partition will also be 
 
 ########## FLASH VENDOR_BOOT END ##########
 
-unset is_hyperos_fw is_miui_rom is_aospa_rom is_oss_kernel_rom is_hyperos_fw_with_new_adsp2
+unset is_miui_rom is_aospa_rom is_oss_kernel_rom is_hyperos_fw_with_new_adsp2
 
 # Patch vbmeta
 ui_print " "
