@@ -45,6 +45,7 @@ fi
 
 SHA1_STOCK="@SHA1_STOCK@"
 SHA1_KSU="@SHA1_KSU@"
+SHA1_SUSFS="@SHA1_SUSFS@"
 
 KEYCODE_UP=42
 KEYCODE_DOWN=41
@@ -371,8 +372,17 @@ elif keycode_select "$_LANG_SELECT_KSU" \
 		ui_print " "
 		sleep 3
 	fi
-	ui_print "- $_LANG_PATCHING Kernel image..."
-	apply_patch ${home}/Image "$SHA1_STOCK" "$SHA1_KSU" ${home}/bs_patches/ksu.p
+	if keycode_select "$_LANG_SELECT_SUSFS" \
+	    " " \
+	    "$_LANG_NOTES" \
+	    "$_LANG_SELECT_SUSFS_PROMPT_1" \
+	    "$_LANG_SELECT_SUSFS_PROMPT_2"; then
+		ui_print "- $_LANG_PATCHING Kernel image..."
+		apply_patch ${home}/Image "$SHA1_STOCK" "$SHA1_SUSFS" ${home}/bs_patches/susfs.p
+	else
+		ui_print "- $_LANG_PATCHING Kernel image..."
+		apply_patch ${home}/Image "$SHA1_STOCK" "$SHA1_KSU" ${home}/bs_patches/ksu.p
+	fi
 fi
 unset exist_ksu_lkm
 export magisk_patched

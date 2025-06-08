@@ -141,6 +141,7 @@ def sign_zip(zip_path):
 def main_multi(build_version):
     image_stock = local_path("Image")
     image_ksu = local_path("Image_ksu")
+    image_susfs = local_path("Image_susfs")
     temp_ak_sh = os.path.join(tempfile.gettempdir(), "anykernel.sh")
     temp_image_7z = os.path.join(tempfile.gettempdir(), "Image.7z")
     temp_dtb_7z = os.path.join(tempfile.gettempdir(), "_dtb.7z")
@@ -151,13 +152,17 @@ def main_multi(build_version):
 
     rich.print("[yellow][1/8][/yellow] [green]Generating SHA1 for image files...[/green]")
     sha1_image_stock = get_sha1(image_stock)
-    sha1_image_ksu = get_sha1(image_ksu)
-    print("SHA1 for Image    :", sha1_image_stock)
-    print("SHA1 for Image_ksu:", sha1_image_ksu)
+    sha1_image_ksu   = get_sha1(image_ksu)
+    sha1_image_susfs = get_sha1(image_susfs)
+    print("SHA1 for Image      :", sha1_image_stock)
+    print("SHA1 for Image_ksu  :", sha1_image_ksu)
+    print("SHA1 for Image_susfs:", sha1_image_susfs)
 
     rich.print("[yellow][2/8][/yellow] [green]Generating patch file...[/green]")
     remove_path(local_path("bs_patches", "ksu.p"))
-    bsdiff4_file_diff(image_stock, image_ksu, local_path("bs_patches", "ksu.p"))
+    remove_path(local_path("bs_patches", "susfs.p"))
+    bsdiff4_file_diff(image_stock, image_ksu,   local_path("bs_patches", "ksu.p"))
+    bsdiff4_file_diff(image_stock, image_susfs, local_path("bs_patches", "susfs.p"))
 
     rich.print("[yellow][3/8][/yellow] [green]Regenerating module dependency information...[/green]")
     assert do_depmod_regen(local_path("_modules_hyperos", "_vendor_boot_modules"), "/lib/modules/") == 0
@@ -178,7 +183,9 @@ def main_multi(build_version):
             with open("anykernel.sh", "r", encoding='utf-8') as f1:
                 with open(temp_ak_sh, "w", encoding='utf-8', newline='\n') as f2:
                     f2.write(
-                        f1.read().replace("@SHA1_STOCK@", sha1_image_stock).replace("@SHA1_KSU@", sha1_image_ksu)
+                        f1.read().replace("@SHA1_STOCK@", sha1_image_stock) \
+                                 .replace("@SHA1_KSU@",   sha1_image_ksu) \
+                                 .replace("@SHA1_SUSFS@", sha1_image_susfs)
                     )
             zip_file = make_zip(
                 "META-INF", "tools", "bs_patches", "langs",
