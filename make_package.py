@@ -16,8 +16,10 @@ import bsdiff4
 import rich
 
 from depmod_regen import main as do_depmod_regen
+from simulate_load_kernel_modules import main as do_simulate_load_kernel_modules
 
 
+VMLINUX_SYMVERS_FILE = '/home/pzqqt/working/android_kernel_xiaomi_marble/out/vmlinux.symvers'
 SIGN_ZIP = False
 APKSIGNER_JAR = 'apksigner.jar'
 SIGN_PRIVATE_KEY = 'your_pk.jks'
@@ -150,7 +152,7 @@ def main_multi(build_version):
     assert os.path.exists(image_stock)
     assert os.path.exists(image_ksu)
 
-    rich.print("[yellow][1/8][/yellow] [green]Generating SHA1 for image files...[/green]")
+    rich.print("[yellow][1/9][/yellow] [green]Generating SHA1 for image files...[/green]")
     sha1_image_stock = get_sha1(image_stock)
     sha1_image_ksu   = get_sha1(image_ksu)
     sha1_image_susfs = get_sha1(image_susfs)
@@ -158,27 +160,38 @@ def main_multi(build_version):
     print("SHA1 for Image_ksu  :", sha1_image_ksu)
     print("SHA1 for Image_susfs:", sha1_image_susfs)
 
-    rich.print("[yellow][2/8][/yellow] [green]Generating patch file...[/green]")
+    rich.print("[yellow][2/9][/yellow] [green]Generating patch file...[/green]")
     remove_path(local_path("bs_patches", "ksu.p"))
     remove_path(local_path("bs_patches", "susfs.p"))
     bsdiff4_file_diff(image_stock, image_ksu,   local_path("bs_patches", "ksu.p"))
     bsdiff4_file_diff(image_stock, image_susfs, local_path("bs_patches", "susfs.p"))
 
-    rich.print("[yellow][3/8][/yellow] [green]Regenerating module dependency information...[/green]")
+    rich.print("[yellow][3/9][/yellow] [green]Regenerating module dependency information...[/green]")
     assert do_depmod_regen(local_path("_modules_hyperos", "_vendor_boot_modules"), "/lib/modules/") == 0
     assert do_depmod_regen(local_path("_modules_hyperos", "_vendor_dlkm_modules"), "/vendor/lib/modules/") == 0
 
+    rich.print("[yellow][4/9][/yellow] [green]Simulating loading kernel modules...[/green]")
+    assert do_simulate_load_kernel_modules(
+        VMLINUX_SYMVERS_FILE,
+        local_path("_modules_hyperos", "_vendor_boot_modules", "modules.load.recovery"), "/lib/modules/",
+    ) == 0
+    assert do_simulate_load_kernel_modules(
+        VMLINUX_SYMVERS_FILE,
+        local_path("_modules_hyperos", "_vendor_boot_modules", "modules.load"), "/lib/modules/",
+        local_path("_modules_hyperos", "_vendor_dlkm_modules", "modules.load"), "/vendor/lib/modules/",
+    ) == 0
+
     try:
-        rich.print("[yellow][4/8][/yellow] [green]Compressing Image.7z ...[/green]")
+        rich.print("[yellow][5/9][/yellow] [green]Compressing Image.7z ...[/green]")
         make_7z(local_path("Image"), temp_image_7z)
 
-        rich.print("[yellow][5/8][/yellow] [green]Compressing _modules_hyperos.7z ...[/green]")
+        rich.print("[yellow][6/9][/yellow] [green]Compressing _modules_hyperos.7z ...[/green]")
         make_7z(local_path("_modules_hyperos"), temp_mods_hos_7z, extra_args="-mf=off")
 
-        rich.print("[yellow][6/8][/yellow] [green]Compressing _dtb.7z ...[/green]")
+        rich.print("[yellow][7/9][/yellow] [green]Compressing _dtb.7z ...[/green]")
         make_7z(local_path("_dtb"), temp_dtb_7z)
 
-        rich.print("[yellow][7/8][/yellow] [green]Making zip package...[/green]")
+        rich.print("[yellow][8/9][/yellow] [green]Making zip package...[/green]")
         with change_dir(BASE_DIR):
             with open("anykernel.sh", "r", encoding='utf-8') as f1:
                 with open(temp_ak_sh, "w", encoding='utf-8', newline='\n') as f2:
@@ -199,7 +212,7 @@ def main_multi(build_version):
         remove_path(temp_dtb_7z)
         remove_path(temp_image_7z)
 
-    rich.print("[yellow][8/8][/yellow] [green]Signing zip package...[/green]")
+    rich.print("[yellow][9/9][/yellow] [green]Signing zip package...[/green]")
     if SIGN_ZIP:
         try:
             sign_zip(zip_file)
