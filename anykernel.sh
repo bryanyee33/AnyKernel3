@@ -320,10 +320,6 @@ do_backup_flag=false
 if [ ! -f /vendor_dlkm/lib/modules/vertmp ]; then
 	do_backup_flag=true
 fi
-is_fixed_qbc_driver=false
-if [ "$(sha1 /vendor_dlkm/lib/modules/qti_battery_charger.ko)" == "b5aa013e06e545df50030ec7b03216f41306f4d4" ]; then
-	is_fixed_qbc_driver=true
-fi
 $BOOTMODE || umount /vendor_dlkm
 
 # KernelSU
@@ -438,7 +434,7 @@ if keycode_select \
 fi
 
 do_fix_battery_usage=false
-if ${is_fixed_qbc_driver} || ${is_oss_kernel_rom}; then
+if ${is_oss_kernel_rom}; then
 	do_fix_battery_usage=true
 elif ${is_miui_rom} || ${is_aospa_rom}; then
 	do_fix_battery_usage=false
@@ -453,7 +449,7 @@ fi
 if ${do_fix_battery_usage}; then
 	qti_battery_charger_mod_options="${qti_battery_charger_mod_options} fix_battery_usage=y"
 fi
-unset do_fix_battery_usage is_fixed_qbc_driver
+unset do_fix_battery_usage
 
 if [ -n "${qti_battery_charger_mod_options}" ]; then
 	qti_battery_charger_mod_options=$(echo "$qti_battery_charger_mod_options" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
