@@ -393,8 +393,8 @@ modules_pkg=${home}/_modules_hyperos.7z
 ${bin}/7za x $modules_pkg -o${home}/ && [ -d ${home}/_vendor_boot_modules ] && [ -d ${home}/_vendor_dlkm_modules ] || \
 	abort "! $_LANG_FAILED_TO_UNPACK ${modules_pkg}!"
 if ${is_hyperos_fw_with_new_adsp2}; then
-	cp -f ${home}/_alt/NEW-qti_battery_charger_main.ko       ${home}/_vendor_dlkm_modules/qti_battery_charger_main.ko
-	cp -f ${home}/_alt/NEW-qti_battery_charger_main-STOCK.ko ${home}/_vendor_boot_modules/qti_battery_charger_main.ko
+	cp -f ${home}/_alt/NEW-qti_battery_charger_main.ko ${home}/_vendor_dlkm_modules/qti_battery_charger_main.ko
+	cp -f ${home}/_alt/NEW-qti_battery_charger_main.ko ${home}/_vendor_boot_modules/qti_battery_charger_main.ko
 fi
 unset modules_pkg
 
