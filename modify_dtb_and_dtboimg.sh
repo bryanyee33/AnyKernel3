@@ -46,13 +46,97 @@ if [ -z "$marble_dtbo" ]; then
 	exit 1
 fi
 
+get_phandle() {
+	local dtb_file="$1"
+	local node="$2"
+
+	fdtget "$dtb_file" "$node" "phandle" -tx
+}
+
 ###############################################################################
 # dtb
 ###############################################################################
 
 echo "- Patching dtb ..."
 
-# do nothing for now
+P_CPU0=$(get_phandle ./dtb "/cpus/cpu@0")
+P_CPU1=$(get_phandle ./dtb "/cpus/cpu@100")
+P_CPU2=$(get_phandle ./dtb "/cpus/cpu@200")
+P_CPU3=$(get_phandle ./dtb "/cpus/cpu@300")
+P_CPU4=$(get_phandle ./dtb "/cpus/cpu@400")
+P_CPU5=$(get_phandle ./dtb "/cpus/cpu@500")
+P_CPU6=$(get_phandle ./dtb "/cpus/cpu@600")
+P_CPU7=$(get_phandle ./dtb "/cpus/cpu@700")
+P_S3E=$(get_phandle ./dtb "/soc/rsc@17a00000/rpmh-regulator-smpe3/regulator-pmr735a-s3")
+P_qmp_aop=$(get_phandle ./dtb "/soc/qcom,qmp-aop")
+
+# ARM: dts: qcom: Define tmecrashdump address offset for tz-log driver usage
+# https://github.com/cupid-development/android_kernel_xiaomi_sm8450-devicetrees/commit/fd74d352a4ce55a00aaa2e14fce09d98db4744d6
+fdtput ./dtb "/soc/tz-log@146AA720" "tmecrashdump-address-offset" 0x81CA0000 -tx
+
+# ARM: dts: qcom: Add cooling cell property for CPU nodes for cape
+# https://github.com/cupid-development/android_kernel_xiaomi_sm8450-devicetrees/commit/da2a9732fa85a65401bc1beeacb3442ffb38bfec
+fdtput ./dtb "/cpus/cpu@100" '#cooling-cells' 2 -tu
+fdtput ./dtb "/cpus/cpu@200" '#cooling-cells' 2 -tu
+fdtput ./dtb "/cpus/cpu@300" '#cooling-cells' 2 -tu
+fdtput ./dtb "/cpus/cpu@500" '#cooling-cells' 2 -tu
+fdtput ./dtb "/cpus/cpu@600" '#cooling-cells' 2 -tu
+
+# ARM: dts: qcom: Add thermal devicetree changes for qultivate
+# https://github.com/cupid-development/android_kernel_xiaomi_sm8450-devicetrees/commit/a24e5321d3c96e0908865091351948fd3cf7182c
+fdtput ./dtb "/soc/qcom,cpu-pause/cpu0-pause"     "qcom,cdev-alias" "thermal-pause-1" -ts
+fdtput ./dtb "/soc/qcom,cpu-pause/cpu1-pause"     "qcom,cdev-alias" "thermal-pause-2" -ts
+fdtput ./dtb "/soc/qcom,cpu-pause/cpu2-pause"     "qcom,cdev-alias" "thermal-pause-4" -ts
+fdtput ./dtb "/soc/qcom,cpu-pause/cpu3-pause"     "qcom,cdev-alias" "thermal-pause-8" -ts
+fdtput ./dtb "/soc/qcom,cpu-pause/cpu5-pause"     "qcom,cdev-alias" "thermal-pause-20" -ts
+fdtput ./dtb "/soc/qcom,cpu-pause/cpu6-pause"     "qcom,cdev-alias" "thermal-pause-40" -ts
+fdtput ./dtb "/soc/qcom,cpu-pause/cpu7-pause"     "qcom,cdev-alias" "thermal-pause-80" -ts
+fdtput ./dtb "/soc/qcom,cpu-pause/apc1-pause"     "qcom,cdev-alias" "thermal-pause-E0" -ts
+fdtput ./dtb "/soc/qcom,cpu-pause/cpu-6-7-pause"  "qcom,cdev-alias" "thermal-pause-C0" -ts
+fdtput ./dtb "/soc/qcom,cpu-hotplug/cpu0-hotplug" "qcom,cdev-alias" "cpu-hotplug0" -ts
+fdtput ./dtb "/soc/qcom,cpu-hotplug/cpu1-hotplug" "qcom,cdev-alias" "cpu-hotplug1" -ts
+fdtput ./dtb "/soc/qcom,cpu-hotplug/cpu2-hotplug" "qcom,cdev-alias" "cpu-hotplug2" -ts
+fdtput ./dtb "/soc/qcom,cpu-hotplug/cpu3-hotplug" "qcom,cdev-alias" "cpu-hotplug3" -ts
+fdtput ./dtb "/soc/qcom,cpu-hotplug/cpu5-hotplug" "qcom,cdev-alias" "cpu-hotplug5" -ts
+fdtput ./dtb "/soc/qcom,cpu-hotplug/cpu6-hotplug" "qcom,cdev-alias" "cpu-hotplug6" -ts
+fdtput ./dtb "/soc/qcom,cpu-hotplug/cpu7-hotplug" "qcom,cdev-alias" "cpu-hotplug7" -ts
+
+fdtput ./dtb "/soc/qcom,cpu-voltage-cdev/qcom,apc1-cluster" "qcom,cpus" -d
+fdtput ./dtb "/soc/qcom,cpu-voltage-cdev/qcom,apc1-cluster" "qcom,cluster0" "$P_CPU4" "$P_CPU5" "$P_CPU6" -tx
+fdtput ./dtb "/soc/qcom,cpu-voltage-cdev/qcom,apc1-cluster" "qcom,cluster1" "$P_CPU7" -tx
+
+fdtput ./dtb "/soc/qcom,cpufreq-cdev" "qcom,cpus" -d
+fdtput ./dtb -cp "/soc/qcom,cpufreq-cdev/cpu-cluster0"
+fdtput ./dtb "/soc/qcom,cpufreq-cdev/cpu-cluster0" "qcom,cpus" "$P_CPU0" "$P_CPU1" "$P_CPU2" "$P_CPU3" -tx
+fdtput ./dtb -cp "/soc/qcom,cpufreq-cdev/cpu-cluster1"
+fdtput ./dtb "/soc/qcom,cpufreq-cdev/cpu-cluster1" "qcom,cpus" "$P_CPU4" "$P_CPU5" "$P_CPU6" -tx
+fdtput ./dtb -cp "/soc/qcom,cpufreq-cdev/cpu-cluster2"
+fdtput ./dtb "/soc/qcom,cpufreq-cdev/cpu-cluster2" "qcom,cpus" "$P_CPU7" -tx
+
+trip=$(fdtget ./dtb "/soc/thermal-zones/ddr/cooling-maps/gold_cdev" "trip" -tx)
+fdtput ./dtb -r "/soc/thermal-zones/ddr/cooling-maps/gold_cdev"
+fdtput ./dtb -cp "/soc/thermal-zones/ddr/cooling-maps/gold_cdev0"
+fdtput ./dtb "/soc/thermal-zones/ddr/cooling-maps/gold_cdev0" "trip" "$trip" -tx
+fdtput ./dtb "/soc/thermal-zones/ddr/cooling-maps/gold_cdev0" "cooling-device" "$P_CPU4" 0xffffffff 0xffffffff -tx
+fdtput ./dtb -cp "/soc/thermal-zones/ddr/cooling-maps/gold_cdev1"
+fdtput ./dtb "/soc/thermal-zones/ddr/cooling-maps/gold_cdev1" "trip" "$trip" -tx
+fdtput ./dtb "/soc/thermal-zones/ddr/cooling-maps/gold_cdev1" "cooling-device" "$P_CPU5" 0xffffffff 0xffffffff -tx
+fdtput ./dtb -cp "/soc/thermal-zones/ddr/cooling-maps/gold_cdev2"
+fdtput ./dtb "/soc/thermal-zones/ddr/cooling-maps/gold_cdev2" "trip" "$trip" -tx
+fdtput ./dtb "/soc/thermal-zones/ddr/cooling-maps/gold_cdev2" "cooling-device" "$P_CPU6" 0xffffffff 0xffffffff -tx
+unset trip
+
+# ARM: dts: msm: Add IPA regulator configuration
+# https://github.com/cupid-development/android_kernel_xiaomi_sm8450-devicetrees/commit/e5c053276f288e40791be316bb0b16e0b7379176
+fdtput ./dtb "/soc/qcom,cnss-qca6490@b0000000" "vdd-wlan-ipa-supply" "$P_S3E" -tx
+fdtput ./dtb "/soc/qcom,cnss-qca6490@b0000000" "qcom,vdd-wlan-ipa-config" 2200000 2200000 0 0 0 -tu
+
+# ARM: dts: msm: Add ipa support for Bluetooth node
+# https://github.com/cupid-development/android_kernel_xiaomi_sm8450-devicetrees/commit/f4cd18877e0085e8ff9d4e62aaf5fdca399fe2ce
+fdtput ./dtb "/soc/bt_qca6490" "mboxes" "$P_qmp_aop" 0x0 -tx
+fdtput ./dtb "/soc/bt_qca6490" "qcom,vreg_ipa" "s3e" -ts
+fdtput ./dtb "/soc/bt_qca6490" "qcom,vreg_ipa-supply" "$P_S3E" -tx
+fdtput ./dtb "/soc/bt_qca6490" "qcom,vreg_ipa-config" 2200000 2200000 0 1 -tu
 
 ###############################################################################
 # dtbo-0: For MIUI / HyperOS / AOSPA
