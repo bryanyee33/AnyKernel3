@@ -83,6 +83,9 @@ _LANG_SELECT_WIRED_BTN_ALTMODE_PROMPT_3=" "
 _LANG_SELECT_OSS_MSM_DRM="是否使用开源的显示驱动?"
 _LANG_SELECT_OSS_MSM_DRM_PROMPT_1="如果你不知道这意味着什么, 请选择否."
 
+_LANG_SELECT_OSS_CAMERA="是否使用开源的相机驱动?"
+_LANG_SELECT_OSS_CAMERA_PROMPT_1="如果你不知道这意味着什么, 请选择否."
+
 _LANG_IR_HAL_XIAOMI="检测到 Xiaomi stock IR HAL. 使用 stock 红外驱动."
 _LANG_IR_HAL_LOS_OSS="检测到 Lineage OSS IR HAL. 使用 OSS 红外驱动."
 _LANG_SELECT_OSS_IR="是否使用开源的红外驱动?"

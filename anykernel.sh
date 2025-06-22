@@ -500,6 +500,24 @@ if ${use_oss_msm_drm}; then
 fi
 unset use_oss_msm_drm
 
+# OSS camera.ko
+use_oss_camera_driver=false
+if ${is_oss_kernel_rom} || ${is_aospa_rom}; then
+	use_oss_camera_driver=true
+elif ! ${is_miui_rom}; then  # For roms ported from other OS
+	use_oss_camera_driver=false
+elif keycode_select \
+    "$_LANG_SELECT_OSS_CAMERA" \
+    " " \
+    "$_LANG_NOTES" \
+    "$_LANG_SELECT_OSS_CAMERA_PROMPT_1"; then
+	use_oss_camera_driver=true
+fi
+if ${use_oss_camera_driver}; then
+	cp -f ${home}/_alt/OSS-camera.ko ${home}/_vendor_dlkm_modules/camera.ko
+fi
+unset use_oss_camera_driver
+
 # OSS ir-spi.ko
 use_oss_ir_driver=false
 if ${is_miui_rom}; then

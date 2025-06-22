@@ -87,6 +87,9 @@ _LANG_SELECT_WIRED_BTN_ALTMODE_PROMPT_3="Select No if you are using MIUI/HyperOS
 _LANG_SELECT_OSS_MSM_DRM="Use open source display drivers?"
 _LANG_SELECT_OSS_MSM_DRM_PROMPT_1="Select No if you don't know what this means."
 
+_LANG_SELECT_OSS_CAMERA="Use open source camera drivers?"
+_LANG_SELECT_OSS_CAMERA_PROMPT_1="Select No if you don't know what this means."
+
 _LANG_IR_HAL_XIAOMI="Detected Xiaomi stock IR HAL. Use stock IR driver."
 _LANG_IR_HAL_LOS_OSS="Detected Lineage OSS IR HAL. Use OSS IR driver."
 _LANG_SELECT_OSS_IR="Use open source IR driver?"
