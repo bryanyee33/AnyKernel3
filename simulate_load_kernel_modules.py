@@ -139,7 +139,8 @@ class VirtualKernelSymbolInfo(TypedDict):
 
 class VirtualKernel:
 
-    def __init__(self, vmlinux_symvers_file: str, *, debug: bool = False):
+    def __init__(self, vmlinux_symvers_file: str, *, ignore_crc_disagree: bool = False, debug: bool = False):
+        self.ignore_crc_disagree = ignore_crc_disagree
         self.debug = debug
         self.__symbols: Dict[str, VirtualKernelSymbolInfo] = {}
         # load vmlinux.symvers
@@ -180,7 +181,8 @@ class VirtualKernel:
                     self.symbols[sym_name]["crc"], self.symbols[sym_name]["source"].name,
                     kernel_module.modversions[sym_name], kernel_module.name,
                 ))
-            return False
+            if not self.ignore_crc_disagree:
+                return False
         if dup_symbols := (kernel_module.export_modversions.keys() & self.symbols.keys()):
             for symbol in sorted(dup_symbols):
                 print("%s: Repeated symbol: %s" % (kernel_module.name, symbol))
@@ -189,7 +191,7 @@ class VirtualKernel:
             self.__symbols[sym_name] = {"source": weakref.proxy(kernel_module), "crc": sym_crc}
         self.__loaded_modules[kernel_module.name] = kernel_module
         if self.debug:
-            print("Load %s succeeded" % kernel_module.name)
+            print("Loaded kernel module %s" % kernel_module.name)
         return True
 
     def load_modules(self, modules_load_file: str, real_modules_path: str = "") -> bool:
