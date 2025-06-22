@@ -7,7 +7,7 @@ import subprocess
 import sys
 import weakref
 from functools import lru_cache
-from typing import TypedDict, Dict, Union, Final, Tuple
+from typing import TypedDict, Set, Dict, Union, Final, Tuple
 
 
 assert sys.platform == "linux"
@@ -136,6 +136,7 @@ class KernelModule:
 class VirtualKernelSymbolInfo(TypedDict):
     source: Union[None, KernelModule]
     crc: Crc
+    used_by: Set[str]
 
 class VirtualKernel:
 
@@ -148,7 +149,11 @@ class VirtualKernel:
             for line in f.readlines():
                 line = line.strip()
                 symbol_name = line.split()[1]
-                symbol_info: VirtualKernelSymbolInfo = {"source": None, "crc": Crc(line.split()[0])}
+                symbol_info: VirtualKernelSymbolInfo = {
+                    "source": None,
+                    "crc": Crc(line.split()[0]),
+                    "used_by": set(),
+                }
                 self.__symbols[symbol_name] = symbol_info
         self.__loaded_modules: Dict[str, KernelModule] = {}
         self._cache_kernel_module = lru_cache(KernelModule)
@@ -188,7 +193,13 @@ class VirtualKernel:
                 print("%s: Repeated symbol: %s" % (kernel_module.name, symbol))
             return False
         for sym_name, sym_crc in kernel_module.export_modversions.items():
-            self.__symbols[sym_name] = {"source": weakref.proxy(kernel_module), "crc": sym_crc}
+            self.__symbols[sym_name] = {
+                "source": weakref.proxy(kernel_module),
+                "crc": sym_crc,
+                "used_by": set(),
+            }
+        for sym_name in kernel_module.modversions.keys():
+            self.__symbols[sym_name]["used_by"].add(kernel_module.name)
         self.__loaded_modules[kernel_module.name] = kernel_module
         if self.debug:
             print("Loaded kernel module %s" % kernel_module.name)
