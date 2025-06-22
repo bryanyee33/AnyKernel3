@@ -138,6 +138,15 @@ fdtput ./dtb "/soc/bt_qca6490" "qcom,vreg_ipa" "s3e" -ts
 fdtput ./dtb "/soc/bt_qca6490" "qcom,vreg_ipa-supply" "$P_S3E" -tx
 fdtput ./dtb "/soc/bt_qca6490" "qcom,vreg_ipa-config" 2200000 2200000 0 1 -tu
 
+# ARM: dts: msm: limit memory dump range to low 8G
+# https://github.com/cupid-development/android_kernel_xiaomi_sm8450-devicetrees/commit/a6046a44a423b4e8c5113a819eb6b36fb6d18b94
+fdtput ./dtb "/reserved-memory/mem_dump_region" "alloc-ranges" 0x0 0x00000000 0x1 0xffffffff -tx
+
+# ARM: dts: msm: Fix the frequency to clock mismatch on cape
+# https://github.com/cupid-development/android_kernel_xiaomi_sm8450-devicetrees/commit/bf394ed1d8cd191a58c9a7e35a72126d7cf732c7
+fdtput ./dtb "/soc/qcom,pcie@1c00000" "max-clock-frequency-hz" 0 0 0 19200000 0 0 0 0 0 0 0 100000000 0 0 0 -tu
+fdtput ./dtb "/soc/qcom,pcie@1c08000" "max-clock-frequency-hz" 0 0 0 19200000 0 0 0 0 0 0 0 100000000 0 0 0 0 -tu
+
 ###############################################################################
 # dtbo-0: For MIUI / HyperOS / AOSPA
 ###############################################################################
