@@ -579,7 +579,7 @@ if ! ${is_miui_rom}; then
 		echo "blocklist $module_name" >> ${home}/_vendor_dlkm_modules/modules.blocklist
 	done
 	# Others
-	for module_name in extend_reclaim; do
+	for module_name in extend_reclaim mi_freqwdg mi_memory perf_helper; do
 		echo "blocklist $module_name" >> ${home}/_vendor_boot_modules/modules.blocklist
 	done
 	for module_name in binder_prio mi_freqwdg miicmpfilter perf_helper; do
