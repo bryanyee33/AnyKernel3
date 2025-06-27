@@ -4,7 +4,7 @@
 ### AnyKernel setup
 # global properties
 properties() { '
-kernel.string=Restore kernel, vendor_boot, and vendor_dlkm image
+kernel.string=Restore kernel
 do.devicecheck=1
 do.modules=0
 do.systemless=1
