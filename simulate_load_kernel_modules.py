@@ -6,7 +6,7 @@ import re
 import subprocess
 import sys
 import weakref
-from functools import lru_cache
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import TypedDict, Set, Dict, Union, Final, Tuple
 
 
@@ -160,7 +160,6 @@ class VirtualKernel:
                 }
                 self.__symbols[symbol_name] = symbol_info
         self.__loaded_modules: Dict[str, KernelModule] = {}
-        self._cache_kernel_module = lru_cache(KernelModule)
 
     @property
     def symbols(self) -> Dict[str, VirtualKernelSymbolInfo]:
@@ -238,13 +237,25 @@ class VirtualKernel:
                 dep_modules = [m[skip_char:] for m in line_split[1:]]
                 modules_dep_dic[module_path] = tuple(dep_modules)
 
+        cached_kernel_module = {}
+        with ProcessPoolExecutor() as executor:
+            futures = {}
+            for module in modules:
+                module_abs_path = os.path.join(modules_dir, module)
+                future = executor.submit(KernelModule, module_abs_path)
+                futures[future] = module_abs_path
+            for future in as_completed(futures.keys()):
+                cached_kernel_module[futures[future]] = future.result()
+
         # Load modules in order according to their dependencies
         remain_modules = set(modules)
         def _load_module(module_path_: str) -> bool:
             for dep_module in reversed(modules_dep_dic[module_path_]):
                 if not _load_module(dep_module):
                     return False
-            if self.load_module(self._cache_kernel_module(os.path.join(modules_dir, module_path_))):
+            module_abs_path_ = os.path.join(modules_dir, module_path_)
+            kernel_module_ = cached_kernel_module.get(module_abs_path_) or KernelModule(module_abs_path_)
+            if self.load_module(kernel_module_):
                 if module_path_ in remain_modules:
                     remain_modules.remove(module_path_)
                 return True
