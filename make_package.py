@@ -27,7 +27,8 @@ SIGN_PRIVATE_KEY_PASSWORD = 'pass:your_pk_password'
 
 assert sys.platform == "linux"
 assert subprocess.getstatusoutput("which 7za")[0] == 0
-assert subprocess.getstatusoutput("which java")[0] == 0
+if SIGN_ZIP:
+    assert subprocess.getstatusoutput("which java")[0] == 0
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_NAME_MULTI = "Melt-marble-%s-multi.zip"
@@ -54,6 +55,9 @@ def change_dir(dir_path):
 
 def local_path(*args):
     return os.path.join(BASE_DIR, *args)
+
+def temp_path(*args):
+    return os.path.join(tempfile.gettempdir(), *args)
 
 def get_sha1(file_path):
     with open(file_path, "rb") as f:
@@ -144,10 +148,10 @@ def main_multi(build_version):
     image_stock = local_path("Image")
     image_ksu = local_path("Image_ksu")
     image_susfs = local_path("Image_susfs")
-    temp_ak_sh = os.path.join(tempfile.gettempdir(), "anykernel.sh")
-    temp_image_7z = os.path.join(tempfile.gettempdir(), "Image.7z")
-    temp_dtb_7z = os.path.join(tempfile.gettempdir(), "_dtb.7z")
-    temp_mods_hos_7z = os.path.join(tempfile.gettempdir(), "_modules_hyperos.7z")
+    temp_ak_sh = temp_path("anykernel.sh")
+    temp_image_7z = temp_path("Image.7z")
+    temp_dtb_7z = temp_path("_dtb.7z")
+    temp_mods_hos_7z = temp_path("_modules_hyperos.7z")
 
     assert os.path.exists(image_stock)
     assert os.path.exists(image_ksu)

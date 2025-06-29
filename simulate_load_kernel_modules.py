@@ -37,21 +37,25 @@ class Crc:
             self._crc = crc
         else:
             raise TypeError("Invalid type")
+        self._hex = self.int_to_crc(self._crc)
 
     def to_int(self) -> int:
         return self._crc
 
     def to_hex(self) -> str:
-        return self.int_to_crc(self._crc)
+        return self._hex
 
     def __eq__(self, other) -> bool:
         return self._crc == other.to_int()
+
+    def __hash__(self) -> int:
+        return hash(self._crc)
 
     __int__ = to_int
     __str__ = to_hex
 
     def __repr__(self):
-        return "Crc(%s)" % self.to_hex()
+        return "Crc(%s)" % self._hex
 
 class KernelModule:
 
@@ -59,10 +63,10 @@ class KernelModule:
         for char in "\"\\';|<>{}$&*?":
             if char in module_path:
                 raise Exception("The path contains illegal characters: %s!" % char)
-        realpath = os.path.realpath(module_path)
-        if not os.path.isfile(realpath):
-            raise Exception("The module file does not exist: %s!" % realpath)
-        self.__path = realpath
+        abs_path = os.path.abspath(module_path)
+        if not os.path.isfile(abs_path):
+            raise Exception("The module file does not exist: %s!" % abs_path)
+        self.__path = abs_path
 
         # get module name
         rc, output = subprocess.getstatusoutput(
@@ -175,15 +179,16 @@ class VirtualKernel:
             for symbol in sorted(missing_symbols):
                 print("%s: Unknown symbol: %s" % (kernel_module.name, symbol))
             return False
-        disagree_crc_symbols = set()
-        for sym_name, sym_crc in kernel_module.modversions.items():
-            if self.symbols[sym_name]["crc"] != sym_crc:
-                disagree_crc_symbols.add(sym_name)
-        if disagree_crc_symbols:
+        if disagree_crc_symbols := {
+            sym_name
+            for sym_name, sym_crc in kernel_module.modversions.items()
+            if self.symbols[sym_name]["crc"] != sym_crc
+        }:
             for sym_name in sorted(disagree_crc_symbols):
                 print("%s: Disagrees about version of symbol %s, %s (%s) vs %s (%s)" % (
                     kernel_module.name, sym_name,
-                    self.symbols[sym_name]["crc"], self.symbols[sym_name]["source"].name,
+                    self.symbols[sym_name]["crc"],
+                    self.symbols[sym_name]["source"].name if self.symbols[sym_name]["source"] else "kernel",
                     kernel_module.modversions[sym_name], kernel_module.name,
                 ))
             if not self.ignore_crc_disagree:
@@ -210,7 +215,7 @@ class VirtualKernel:
         with open(modules_load_file, 'r', encoding="utf-8") as f:
             modules = [m.strip() for m in f.readlines()]
 
-        modules_dir = os.path.dirname(modules_load_file)
+        modules_dir = os.path.abspath(os.path.dirname(modules_load_file))
 
         # load modules.dep
         modules_dep_dic = {}
@@ -220,26 +225,28 @@ class VirtualKernel:
         with open(os.path.join(modules_dir, "modules.dep"), 'r', encoding="utf-8") as f:
             for line_no, line in enumerate(f.readlines(), 1):
                 line = line.strip()
+                if not line:
+                    continue
                 line_split = line.split()
-                module_abs_path = line_split[0]
-                if not module_abs_path.endswith(":"):
+                module_path = line_split[0]
+                if not module_path.endswith(":"):
                     print(line_split)
                     raise RuntimeError(
                         "Error parsing line %d of %s!" % (line_no, os.path.join(modules_dir, "modules.load"))
                     )
-                module_abs_path = module_abs_path[skip_char:-1]
+                module_path = module_path[skip_char:-1]
                 dep_modules = [m[skip_char:] for m in line_split[1:]]
-                modules_dep_dic[module_abs_path] = tuple(dep_modules)
+                modules_dep_dic[module_path] = tuple(dep_modules)
 
         # Load modules in order according to their dependencies
         remain_modules = set(modules)
-        def _load_module(module_abs_path_: str) -> bool:
-            for dep_module in reversed(modules_dep_dic[module_abs_path_]):
+        def _load_module(module_path_: str) -> bool:
+            for dep_module in reversed(modules_dep_dic[module_path_]):
                 if not _load_module(dep_module):
                     return False
-            if self.load_module(self._cache_kernel_module(os.path.join(modules_dir, module_abs_path_))):
-                if module_abs_path_ in remain_modules:
-                    remain_modules.remove(module_abs_path_)
+            if self.load_module(self._cache_kernel_module(os.path.join(modules_dir, module_path_))):
+                if module_path_ in remain_modules:
+                    remain_modules.remove(module_path_)
                 return True
             return False
 
