@@ -69,9 +69,7 @@ class KernelModule:
         self.__path = abs_path
 
         # get module name
-        rc, output = subprocess.getstatusoutput(
-            "modinfo '%s' 2>/dev/null | grep -m1 '^name:' | awk '{print $2}'" % self.__path
-        )
+        rc, output = subprocess.getstatusoutput("modinfo -F name '%s' 2>/dev/null" % self.__path)
         if rc != 0:
             print(output)
             raise RuntimeError("Failed to get module name for '%s'" % self.__path)
@@ -123,9 +121,7 @@ class KernelModule:
     @property
     def depends(self) -> Tuple[str, ...]:
         if self.__cached_depends is None:
-            rc, output = subprocess.getstatusoutput(
-                "modinfo '%s' 2>/dev/null | grep -m1 '^depends:' | awk '{print $2}'" % self.__path
-            )
+            rc, output = subprocess.getstatusoutput("modinfo -F depends '%s' 2>/dev/null" % self.__path)
             if rc != 0 or not output.strip():
                 self.__cached_depends = tuple()
             else:
