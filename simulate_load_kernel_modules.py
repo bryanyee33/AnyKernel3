@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import sys
+import shutil
 import weakref
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import TypedDict, Set, Dict, Union, Final, Tuple
@@ -12,7 +13,7 @@ from typing import TypedDict, Set, Dict, Union, Final, Tuple
 
 assert sys.platform == "linux"
 for _tool in ("grep", "awk", "modinfo", "modprobe"):
-    assert subprocess.getstatusoutput("which '%s'" % _tool)[0] == 0
+    assert shutil.which(_tool)
 
 __AUTHOR__: Final = "Pzqqt"
 
@@ -60,42 +61,41 @@ class Crc:
 class KernelModule:
 
     def __init__(self, module_path: str):
-        for char in "\"\\';|<>{}$&*?":
-            if char in module_path:
-                raise Exception("The path contains illegal characters: %s!" % char)
         abs_path = os.path.abspath(module_path)
         if not os.path.isfile(abs_path):
             raise Exception("The module file does not exist: %s!" % abs_path)
         self.__path = abs_path
 
         # get module name
-        rc, output = subprocess.getstatusoutput("modinfo -F name '%s' 2>/dev/null" % self.__path)
-        if rc != 0:
-            print(output)
-            raise RuntimeError("Failed to get module name for '%s'" % self.__path)
-        if not output.strip():
+        cp = subprocess.run(
+            ["modinfo", "-F", "name", self.__path],
+            encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        )
+        cp.check_returncode()
+        output = cp.stdout.rstrip()
+        if not output:
             print("Warning: Module %s has no name defined, the file name will be used instead as the module name."
                   % self.__path)
             # The character '-' seems to be disallowed in module names,
             # so it is replaced with an '_'.
             self.__name = os.path.basename(self.__path).split('.', 1)[0].replace('-', '_')
         else:
-            self.__name = output.strip()
+            self.__name = output
 
         # get module symbol versions
         self.__modversions: Dict[str, Crc] = {}
-        rc, output = subprocess.getstatusoutput("modprobe '%s' --show-modversions" % self.__path)
-        if rc != 0:
-            print(output)
-            raise RuntimeError("modprobe failed!")
+        cp = subprocess.run(["modprobe", self.__path, "--show-modversions"], encoding="utf-8", capture_output=True)
+        cp.check_returncode()
+        output = cp.stdout.rstrip()
         for line in output.splitlines():
             crc_str, symbol = line.strip().split()
             self.__modversions[symbol] = Crc(crc_str)
 
         # get module exported symbol versions
         self.__export_modversions: Dict[str, Crc] = {}
-        rc, output = subprocess.getstatusoutput("modprobe '%s' --show-exports" % self.__path)
-        if rc == 0:
+        cp = subprocess.run(["modprobe", self.__path, "--show-exports"], encoding="utf-8", capture_output=True)
+        output = cp.stdout.rstrip()
+        if cp.returncode == 0:
             for line in output.splitlines():
                 crc_str, symbol = line.strip().split()
                 self.__export_modversions[symbol] = Crc(crc_str)
@@ -121,8 +121,12 @@ class KernelModule:
     @property
     def depends(self) -> Tuple[str, ...]:
         if self.__cached_depends is None:
-            rc, output = subprocess.getstatusoutput("modinfo -F depends '%s' 2>/dev/null" % self.__path)
-            if rc != 0 or not output.strip():
+            cp = subprocess.run(
+                ["modinfo", "-F", "depends", self.__path],
+                encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            )
+            output = cp.stdout.rstrip()
+            if cp.returncode != 0 or not output:
                 self.__cached_depends = tuple()
             else:
                 # The character '-' seems to be disallowed in module names,

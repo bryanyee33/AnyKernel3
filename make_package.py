@@ -26,9 +26,9 @@ SIGN_PRIVATE_KEY = 'your_pk.jks'
 SIGN_PRIVATE_KEY_PASSWORD = 'pass:your_pk_password'
 
 assert sys.platform == "linux"
-assert subprocess.getstatusoutput("which 7za")[0] == 0
+assert shutil.which("7za")
 if SIGN_ZIP:
-    assert subprocess.getstatusoutput("which java")[0] == 0
+    assert shutil.which("java")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_NAME_MULTI = "Melt-marble-%s-multi.zip"
@@ -119,28 +119,28 @@ def make_zip(*include):
 
 @timeit
 def make_7z(path_, output_file, extra_args=""):
+    args = ["7za", "a", "-t7z", "-mx=9"]
+    if extra_args:
+        args.append(extra_args)
+    args += ["-bd", os.path.abspath(output_file)]
     if os.path.isdir(path_):
-        rc, text = subprocess.getstatusoutput(
-            'cd "%s" && 7za a -t7z -mx=9 %s -bd "%s" "./*"' % (path_, extra_args, os.path.abspath(output_file))
-        )
+        cwd = path_
+        args.append("./*")
     else:
         dirname, basename = os.path.split(path_)
-        rc, text = subprocess.getstatusoutput(
-            'cd "%s" && 7za a -t7z -mx=9 %s -bd "%s" "./%s"' % (dirname, extra_args, os.path.abspath(output_file), basename)
-        )
-    print(text)
-    assert rc == 0
+        cwd = dirname
+        args.append("./" + basename)
+    cp = subprocess.run(args, cwd=cwd)
+    cp.check_returncode()
 
 def sign_zip(zip_path):
     # Signing a zip file is just like signing an apk
     try:
-        rc, text = subprocess.getstatusoutput(
-            'java -jar "%s" sign --ks "%s" --ks-pass "%s" --min-sdk-version 32 "%s"' % (
-                APKSIGNER_JAR, SIGN_PRIVATE_KEY, SIGN_PRIVATE_KEY_PASSWORD, zip_path,
-            )
-        )
-        print(text)
-        assert rc == 0
+        cp = subprocess.run([
+            "java", "-jar", APKSIGNER_JAR, "sign", "--ks", SIGN_PRIVATE_KEY,
+            "--ks-pass", SIGN_PRIVATE_KEY_PASSWORD, "--min-sdk-version", "32", zip_path
+        ])
+        cp.check_returncode()
     finally:
         remove_path(zip_path + ".idsig")
 

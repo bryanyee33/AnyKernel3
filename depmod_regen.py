@@ -11,7 +11,7 @@ import tempfile
 FAKE_MOD_VERSION = "1.1"
 
 assert sys.platform == "linux"
-assert subprocess.getstatusoutput("which depmod")[0] == 0
+assert shutil.which("depmod")
 
 def main(modules_dir: str, real_modules_path: str) -> int:
     assert os.path.isdir(modules_dir)
@@ -27,10 +27,9 @@ def main(modules_dir: str, real_modules_path: str) -> int:
                 shutil.copy(os.path.join(modules_dir, file), tmp_modules_dir)
 
         print("- Running depmod...")
-        rc_, text_ = subprocess.getstatusoutput("depmod -b %s %s" % (tmp_base_dir, FAKE_MOD_VERSION))
-        print(text_)
-        if rc_ != 0:
-            return rc_
+        cp = subprocess.run(["depmod", "-b", tmp_base_dir, FAKE_MOD_VERSION])
+        if cp.returncode != 0:
+            return cp.returncode
 
         for file in ("modules.alias", "modules.softdep"):
             shutil.copyfile(os.path.join(tmp_modules_dir, file), os.path.join(modules_dir, file))
