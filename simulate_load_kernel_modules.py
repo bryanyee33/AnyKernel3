@@ -17,6 +17,12 @@ for _tool in ("grep", "awk", "modinfo", "modprobe"):
 
 __AUTHOR__: Final = "Pzqqt"
 
+try:
+    import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
+
 class Crc:
 
     @staticmethod
@@ -244,7 +250,10 @@ class VirtualKernel:
                 module_abs_path = os.path.join(modules_dir, module)
                 future = executor.submit(KernelModule, module_abs_path)
                 futures[future] = module_abs_path
-            for future in as_completed(futures.keys()):
+            completed_futures = as_completed(futures.keys())
+            if HAS_TQDM:
+                completed_futures = tqdm.tqdm(completed_futures, desc="Pre-reading modules", total=len(modules))
+            for future in completed_futures:
                 cached_kernel_module[futures[future]] = future.result()
 
         # Load modules in order according to their dependencies
@@ -261,7 +270,10 @@ class VirtualKernel:
                 return True
             return False
 
-        for module in modules:
+        modules_iter = modules
+        if HAS_TQDM:
+            modules_iter = tqdm.tqdm(modules, desc="Loading modules")
+        for module in modules_iter:
             if not _load_module(module):
                 print("Error: Failed to load %s!" % os.path.join(modules_dir, module))
                 print("These kernel modules are still not loaded:")
