@@ -172,7 +172,7 @@ class VirtualKernel:
         return self.__symbols.copy()
 
     @property
-    def loaded_modules(self):
+    def loaded_modules(self) -> Dict[str, KernelModule]:
         return self.__loaded_modules.copy()
 
     def load_module(self, kernel_module: KernelModule) -> bool:
