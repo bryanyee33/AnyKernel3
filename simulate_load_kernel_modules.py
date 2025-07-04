@@ -176,29 +176,29 @@ class VirtualKernel:
         return self.__loaded_modules.copy()
 
     def load_module(self, kernel_module: KernelModule) -> bool:
-        if kernel_module.name in self.loaded_modules.keys():
+        if kernel_module.name in self.__loaded_modules.keys():
             if self.debug:
                 print("Warning: Module %s has already been loaded" % kernel_module.name)
             return True
-        if missing_symbols := (kernel_module.modversions.keys() - self.symbols.keys()):
+        if missing_symbols := (kernel_module.modversions.keys() - self.__symbols.keys()):
             for symbol in sorted(missing_symbols):
                 print("%s: Unknown symbol: %s" % (kernel_module.name, symbol))
             return False
         if disagree_crc_symbols := {
             sym_name
             for sym_name, sym_crc in kernel_module.modversions.items()
-            if self.symbols[sym_name]["crc"] != sym_crc
+            if self.__symbols[sym_name]["crc"] != sym_crc
         }:
             for sym_name in sorted(disagree_crc_symbols):
                 print("%s: Disagrees about version of symbol %s, %s (%s) vs %s (%s)" % (
                     kernel_module.name, sym_name,
-                    self.symbols[sym_name]["crc"],
-                    self.symbols[sym_name]["source"].name if self.symbols[sym_name]["source"] else "kernel",
+                    self.__symbols[sym_name]["crc"],
+                    self.__symbols[sym_name]["source"].name if self.__symbols[sym_name]["source"] else "kernel",
                     kernel_module.modversions[sym_name], kernel_module.name,
                 ))
             if not self.ignore_crc_disagree:
                 return False
-        if dup_symbols := (kernel_module.export_modversions.keys() & self.symbols.keys()):
+        if dup_symbols := (kernel_module.export_modversions.keys() & self.__symbols.keys()):
             for symbol in sorted(dup_symbols):
                 print("%s: Repeated symbol: %s" % (kernel_module.name, symbol))
             return False
