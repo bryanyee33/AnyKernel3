@@ -18,10 +18,13 @@ for _tool in ("grep", "awk", "modinfo", "modprobe"):
 __AUTHOR__: Final = "Pzqqt"
 
 try:
-    import tqdm
+    from tqdm import tqdm
     HAS_TQDM = True
 except ImportError:
     HAS_TQDM = False
+    # noinspection PyUnusedLocal
+    def tqdm(*args, **kwargs):
+        raise NotImplementedError
 
 class Crc:
 
@@ -156,15 +159,19 @@ class VirtualKernel:
         self.__symbols: Dict[str, VirtualKernelSymbolInfo] = {}
         # load vmlinux.symvers
         with open(vmlinux_symvers_file, 'r', encoding="utf-8") as f:
-            for line in f.readlines():
+            for line_no, line in enumerate(f.readlines(), 1):
                 line = line.strip()
-                symbol_name = line.split()[1]
-                symbol_info: VirtualKernelSymbolInfo = {
-                    "source": None,
-                    "crc": Crc(line.split()[0]),
-                    "used_by": set(),
-                }
-                self.__symbols[symbol_name] = symbol_info
+                if not line:
+                    continue
+                try:
+                    symbol_name = line.split()[1]
+                    self.__symbols[symbol_name] = {
+                        "source": None,
+                        "crc": Crc(line.split()[0]),
+                        "used_by": set(),
+                    }
+                except (IndexError, ValueError, TypeError) as e:
+                    raise RuntimeError("Error parsing line %d of %s!" % (line_no, vmlinux_symvers_file)) from e
         self.__loaded_modules: Dict[str, KernelModule] = {}
 
     @property
@@ -180,13 +187,15 @@ class VirtualKernel:
             if self.debug:
                 print("Warning: Module %s has already been loaded" % kernel_module.name)
             return True
-        if missing_symbols := (kernel_module.modversions.keys() - self.__symbols.keys()):
+        km_modversions = kernel_module.modversions
+        km_export_modversions = kernel_module.export_modversions
+        if missing_symbols := (km_modversions.keys() - self.__symbols.keys()):
             for symbol in sorted(missing_symbols):
                 print("%s: Unknown symbol: %s" % (kernel_module.name, symbol))
             return False
         if disagree_crc_symbols := {
             sym_name
-            for sym_name, sym_crc in kernel_module.modversions.items()
+            for sym_name, sym_crc in km_modversions.items()
             if self.__symbols[sym_name]["crc"] != sym_crc
         }:
             for sym_name in sorted(disagree_crc_symbols):
@@ -194,21 +203,21 @@ class VirtualKernel:
                     kernel_module.name, sym_name,
                     self.__symbols[sym_name]["crc"],
                     self.__symbols[sym_name]["source"].name if self.__symbols[sym_name]["source"] else "kernel",
-                    kernel_module.modversions[sym_name], kernel_module.name,
+                    km_modversions[sym_name], kernel_module.name,
                 ))
             if not self.ignore_crc_disagree:
                 return False
-        if dup_symbols := (kernel_module.export_modversions.keys() & self.__symbols.keys()):
+        if dup_symbols := (km_export_modversions.keys() & self.__symbols.keys()):
             for symbol in sorted(dup_symbols):
                 print("%s: Repeated symbol: %s" % (kernel_module.name, symbol))
             return False
-        for sym_name, sym_crc in kernel_module.export_modversions.items():
+        for sym_name, sym_crc in km_export_modversions.items():
             self.__symbols[sym_name] = {
                 "source": weakref.proxy(kernel_module),
                 "crc": sym_crc,
                 "used_by": set(),
             }
-        for sym_name in kernel_module.modversions.keys():
+        for sym_name in km_modversions.keys():
             self.__symbols[sym_name]["used_by"].add(kernel_module.name)
         self.__loaded_modules[kernel_module.name] = kernel_module
         if self.debug:
@@ -224,9 +233,6 @@ class VirtualKernel:
 
         # load modules.dep
         modules_dep_dic = {}
-        if not real_modules_path.endswith("/"):
-            real_modules_path += "/"
-        skip_char = len(real_modules_path)
         with open(os.path.join(modules_dir, "modules.dep"), 'r', encoding="utf-8") as f:
             for line_no, line in enumerate(f.readlines(), 1):
                 line = line.strip()
@@ -235,12 +241,12 @@ class VirtualKernel:
                 line_split = line.split()
                 module_path = line_split[0]
                 if not module_path.endswith(":"):
-                    print(line_split)
                     raise RuntimeError(
                         "Error parsing line %d of %s!" % (line_no, os.path.join(modules_dir, "modules.load"))
                     )
-                module_path = module_path[skip_char:-1]
-                dep_modules = [m[skip_char:] for m in line_split[1:]]
+                module_path = module_path[:-1]
+                module_path = os.path.relpath(module_path, real_modules_path)
+                dep_modules = [os.path.relpath(m, real_modules_path) for m in line_split[1:]]
                 modules_dep_dic[module_path] = tuple(dep_modules)
 
         cached_kernel_module = {}
@@ -252,27 +258,28 @@ class VirtualKernel:
                 futures[future] = module_abs_path
             completed_futures = as_completed(futures.keys())
             if HAS_TQDM:
-                completed_futures = tqdm.tqdm(completed_futures, desc="Pre-reading modules", total=len(modules))
+                completed_futures = tqdm(completed_futures, desc="Pre-reading modules", total=len(modules))
             for future in completed_futures:
                 cached_kernel_module[futures[future]] = future.result()
 
         # Load modules in order according to their dependencies
         remain_modules = set(modules)
         def _load_module(module_path_: str) -> bool:
+            if module_path_ not in remain_modules:
+                return True
             for dep_module in reversed(modules_dep_dic[module_path_]):
                 if not _load_module(dep_module):
                     return False
             module_abs_path_ = os.path.join(modules_dir, module_path_)
             kernel_module_ = cached_kernel_module.get(module_abs_path_) or KernelModule(module_abs_path_)
             if self.load_module(kernel_module_):
-                if module_path_ in remain_modules:
-                    remain_modules.remove(module_path_)
+                remain_modules.remove(module_path_)
                 return True
             return False
 
         modules_iter = modules
         if HAS_TQDM:
-            modules_iter = tqdm.tqdm(modules, desc="Loading modules")
+            modules_iter = tqdm(modules, desc="Loading modules")
         for module in modules_iter:
             if not _load_module(module):
                 print("Error: Failed to load %s!" % os.path.join(modules_dir, module))
