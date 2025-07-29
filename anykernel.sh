@@ -195,16 +195,17 @@ if [ "$rc" != 0 ]; then
 		ui_print "Recommend KernelFlasher:"
 		ui_print "  https://github.com/capntrips/KernelFlasher/releases"
 	fi
-	abort "Aborting..."
-fi
-snapshot_status=$(${bin}/snapshotupdater_static dump 2>/dev/null | grep '^Update state:' | awk '{print $3}')
-ui_print "Current snapshot state: $snapshot_status"
-if [ "$snapshot_status" != "none" ]; then
-	ui_print " "
-	ui_print "Seems like you just installed a rom update."
-	ui_print "Please use the \"Merge Snapshots\" feature in TWRP's"
-	ui_print "advanced menu first to merge snapshots immediately."
-	abort "Aborting..."
+	ui_print "Flashing anyways..."
+else
+	snapshot_status=$(${bin}/snapshotupdater_static dump 2>/dev/null | grep '^Update state:' | awk '{print $3}')
+	ui_print "Current snapshot state: $snapshot_status"
+	if [ "$snapshot_status" != "none" ]; then
+		ui_print " "
+		ui_print "Seems like you just installed a rom update."
+		ui_print "Please use the \"Merge Snapshots\" feature in TWRP's"
+		ui_print "advanced menu first to merge snapshots immediately."
+		abort "Aborting..."
+	fi
 fi
 unset rc snapshot_status
 
@@ -324,7 +325,7 @@ if true; then  # I don't want to adjust the indentation of the code block below,
 	ui_print "- Updating /vendor_dlkm image..."
 	rm -f ${extract_vendor_dlkm_modules_dir}/*
 	cp ${home}/_vendor_dlkm_modules/* ${extract_vendor_dlkm_modules_dir}/ || \
-		abort "! Failed to update modules! No enough free space?"
+		abort "! Failed to update modules! Not enough free space?"
 	cp ${home}/vertmp ${extract_vendor_dlkm_modules_dir}/vertmp
 	sync
 
@@ -416,7 +417,7 @@ for dtb_file in $dtb_img_splitted; do
 		break
 	fi
 done
-[ -z "$ukee_dtb" ] && abort "! Can not found Ukee dtb file!"
+[ -z "$ukee_dtb" ] && abort "! Could not find Ukee dtb file!"
 
 # Copy the gpu frequency and voltage configuration of old dtb to the new dtb
 if [ "$(sha1 $ukee_dtb)" != "$(sha1 ${home}/dtb)" ]; then
